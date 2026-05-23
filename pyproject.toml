@@ -1,0 +1,21 @@
+[project]
+name = "loose-switch"
+version = "0.0.1"
+description = "A switcher that allows specify conditions and inputs/outputs individually"
+readme = "README.md"
+license = {text = "MIT license"}
+requires-python = ">=3.10"
+classifiers = []
+dependencies = [
+]
+
+[project.urls]
+Repository = "https://github.com/id-fa/ComfyUI-Loose-Switch"
+
+[tool.comfy]
+PublisherId = "id-fa"
+DisplayName = "Loose Switch"
+Icon = ""
+Tags = []
+Repository = "https://github.com/id-fa/ComfyUI-Loose-Switch"
+includes = []
