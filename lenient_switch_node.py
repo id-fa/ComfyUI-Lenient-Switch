@@ -22,7 +22,7 @@ _NOT_PROVIDED = object()
 SLOTS = ("a", "b", "c", "d", "e")
 
 
-class LooseSwitch:
+class LenientSwitch:
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -122,9 +122,9 @@ class LooseSwitch:
 
 
 NODE_CLASS_MAPPINGS = {
-    "LooseSwitch": LooseSwitch,
+    "LenientSwitch": LenientSwitch,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "LooseSwitch": "Loose Switch",
+    "LenientSwitch": "Lenient Switch",
 }

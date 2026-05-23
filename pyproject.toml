@@ -1,5 +1,5 @@
 [project]
-name = "loose-switch"
+name = "lenient-switch"
 version = "0.0.1"
 description = "A switcher that allows specify conditions and inputs/outputs individually"
 readme = "README.md"
@@ -10,12 +10,12 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/id-fa/ComfyUI-Loose-Switch"
+Repository = "https://github.com/id-fa/ComfyUI-Lenient-Switch"
 
 [tool.comfy]
 PublisherId = "id-fa"
-DisplayName = "Loose Switch"
+DisplayName = "Lenient Switch"
 Icon = ""
 Tags = []
-Repository = "https://github.com/id-fa/ComfyUI-Loose-Switch"
+Repository = "https://github.com/id-fa/ComfyUI-Lenient-Switch"
 includes = []
