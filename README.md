@@ -20,7 +20,7 @@ Most switch nodes force you to choose a slot based on the same value you forward
 | --- | --- | --- |
 | `source_a`, `source_b` | yes | Pass-through sources (any type) |
 | `source_c`, `source_d`, `source_e` | no | Additional pass-through sources |
-| `condition_a` … `condition_e` | no | Per-slot truthiness test. If unconnected, the matching `source_X` is used as the condition |
+| `pass_if_a` … `pass_if_e` | no | Per-slot truthiness test (**not** a CONDITIONING input). If unconnected, the matching `source_X` is used as the condition |
 
 Toggles (required):
 

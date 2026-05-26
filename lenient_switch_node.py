@@ -25,10 +25,21 @@ SLOTS = ("a", "b", "c", "d", "e")
 class LenientSwitch:
     @classmethod
     def INPUT_TYPES(cls):
+        pass_if_tooltip = (
+            "Per-slot truthiness test (NOT a CONDITIONING input). "
+            "When connected, this value decides whether the matching source_X is "
+            "forwarded; if unconnected, source_X is tested against itself."
+        )
         return {
             "required": {
-                "source_a": (any_type,),
-                "source_b": (any_type,),
+                "source_a": (
+                    any_type,
+                    {"tooltip": "Pass-through source for slot A (any type)."},
+                ),
+                "source_b": (
+                    any_type,
+                    {"tooltip": "Pass-through source for slot B (any type)."},
+                ),
                 "treat_zero_as_false": ("BOOLEAN", {"default": True}),
                 "treat_empty_string_as_false": ("BOOLEAN", {"default": True}),
                 "evaluate_boolean": ("BOOLEAN", {"default": True}),
@@ -36,14 +47,23 @@ class LenientSwitch:
                 "block_on_all_false": ("BOOLEAN", {"default": False}),
             },
             "optional": {
-                "source_c": (any_type,),
-                "source_d": (any_type,),
-                "source_e": (any_type,),
-                "condition_a": (any_type,),
-                "condition_b": (any_type,),
-                "condition_c": (any_type,),
-                "condition_d": (any_type,),
-                "condition_e": (any_type,),
+                "source_c": (
+                    any_type,
+                    {"tooltip": "Optional pass-through source for slot C (any type)."},
+                ),
+                "source_d": (
+                    any_type,
+                    {"tooltip": "Optional pass-through source for slot D (any type)."},
+                ),
+                "source_e": (
+                    any_type,
+                    {"tooltip": "Optional pass-through source for slot E (any type)."},
+                ),
+                "pass_if_a": (any_type, {"tooltip": pass_if_tooltip}),
+                "pass_if_b": (any_type, {"tooltip": pass_if_tooltip}),
+                "pass_if_c": (any_type, {"tooltip": pass_if_tooltip}),
+                "pass_if_d": (any_type, {"tooltip": pass_if_tooltip}),
+                "pass_if_e": (any_type, {"tooltip": pass_if_tooltip}),
             },
         }
 
@@ -97,7 +117,7 @@ class LenientSwitch:
             "d": kwargs.get("source_d", _NOT_PROVIDED),
             "e": kwargs.get("source_e", _NOT_PROVIDED),
         }
-        conditions = {slot: kwargs.get(f"condition_{slot}", _NOT_PROVIDED) for slot in SLOTS}
+        conditions = {slot: kwargs.get(f"pass_if_{slot}", _NOT_PROVIDED) for slot in SLOTS}
 
         for slot in SLOTS:
             src = sources[slot]
