@@ -4,11 +4,13 @@ A ComfyUI custom node that lets you **route any value through a switch while spe
 
 Most switch nodes force you to choose a slot based on the same value you forward downstream. Lenient Switch decouples those: each slot has its own optional *condition* input. If a condition is connected, it decides whether that slot wins; if not, the source itself is used for the test. This makes it easy to gate one signal on the truthiness of another (e.g. "forward the image when the mask is non-empty", "pick a prompt based on a flag").
 
-![Screenshot](docs/screenshot3.png)
+|Lenient Switch|Simple Selector (Switch)|
+|---|---|
+|![Screenshot1](docs/screenshot3.png)|![Screenshot2](docs/screenshot4.png)
 
-![Example1(old version)](docs/screenshot1.png)
-
-![Example2(old version)](docs/screenshot2.png)
+|screenshot 1|screenshot 2|
+|---|---|
+|![Example1(old version)](docs/screenshot1.png)|![Example2(old version)](docs/screenshot2.png)|
 
 ## Node
 

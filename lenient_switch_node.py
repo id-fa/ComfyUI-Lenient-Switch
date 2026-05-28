@@ -73,7 +73,9 @@ class LenientSwitch:
     CATEGORY = "utils"
 
     @staticmethod
-    def _is_truthy(value, treat_zero, treat_empty_string, evaluate_boolean, treat_empty_list):
+    def _is_truthy(
+        value, treat_zero, treat_empty_string, evaluate_boolean, treat_empty_list
+    ):
         if value is None:
             return False
 
@@ -117,7 +119,9 @@ class LenientSwitch:
             "d": kwargs.get("source_d", _NOT_PROVIDED),
             "e": kwargs.get("source_e", _NOT_PROVIDED),
         }
-        conditions = {slot: kwargs.get(f"pass_if_{slot}", _NOT_PROVIDED) for slot in SLOTS}
+        conditions = {
+            slot: kwargs.get(f"pass_if_{slot}", _NOT_PROVIDED) for slot in SLOTS
+        }
 
         for slot in SLOTS:
             src = sources[slot]
@@ -141,10 +145,90 @@ class LenientSwitch:
         return (None, False)
 
 
+_SELECT_CHOICES = ["none", "A", "B", "C", "D", "E"]
+
+
+class SimpleSelectorSwitch:
+    @classmethod
+    def INPUT_TYPES(cls):
+        label_tooltip = (
+            "Free-form per-slot memo (e.g. 'SDXL base'). Not used by the node."
+        )
+
+        def label_field(letter):
+            return (
+                "STRING",
+                {
+                    "default": "",
+                    "multiline": False,
+                    "placeholder": f"{letter} label (memo)",
+                    "tooltip": label_tooltip,
+                },
+            )
+
+        return {
+            "required": {
+                "select": (
+                    _SELECT_CHOICES,
+                    {
+                        "default": "none",
+                        "tooltip": (
+                            "Pick which source to forward. 'none' forwards nothing "
+                            "(see block_on_none_selected)."
+                        ),
+                    },
+                ),
+                "label_a": label_field("A"),
+                "label_b": label_field("B"),
+                "label_c": label_field("C"),
+                "label_d": label_field("D"),
+                "label_e": label_field("E"),
+                "block_on_none_selected": (
+                    "BOOLEAN",
+                    {
+                        "default": False,
+                        "tooltip": (
+                            "When 'none' is selected, emit ExecutionBlocker so downstream "
+                            "nodes are skipped instead of receiving None."
+                        ),
+                    },
+                ),
+            },
+            "optional": {
+                "source_a": (any_type, {"tooltip": "Source for slot A (any type)."}),
+                "source_b": (any_type, {"tooltip": "Source for slot B (any type)."}),
+                "source_c": (any_type, {"tooltip": "Source for slot C (any type)."}),
+                "source_d": (any_type, {"tooltip": "Source for slot D (any type)."}),
+                "source_e": (any_type, {"tooltip": "Source for slot E (any type)."}),
+            },
+        }
+
+    RETURN_TYPES = (any_type, "STRING")
+    RETURN_NAMES = ("output", "label")
+    FUNCTION = "run"
+    CATEGORY = "utils"
+
+    def run(self, select, block_on_none_selected, **kwargs):
+        if select == "none":
+            if block_on_none_selected and ExecutionBlocker is not None:
+                blocker = ExecutionBlocker(None)
+                return (blocker, blocker)
+            return (None, "")
+
+        slot = select.lower()
+        src = kwargs.get(f"source_{slot}", _NOT_PROVIDED)
+        label = kwargs.get(f"label_{slot}", "")
+        if src is _NOT_PROVIDED:
+            return (None, label)
+        return (src, label)
+
+
 NODE_CLASS_MAPPINGS = {
     "LenientSwitch": LenientSwitch,
+    "SimpleSelectorSwitch": SimpleSelectorSwitch,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "LenientSwitch": "Lenient Switch",
+    "SimpleSelectorSwitch": "Simple Selector (Switch)",
 }
