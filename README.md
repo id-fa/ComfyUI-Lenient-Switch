@@ -4,9 +4,7 @@ A ComfyUI custom node that lets you **route any value through a switch while spe
 
 Most switch nodes force you to choose a slot based on the same value you forward downstream. Lenient Switch decouples those: each slot has its own optional *condition* input. If a condition is connected, it decides whether that slot wins; if not, the source itself is used for the test. This makes it easy to gate one signal on the truthiness of another (e.g. "forward the image when the mask is non-empty", "pick a prompt based on a flag").
 
-|Lenient Switch|Simple Selector (Switch)|
-|---|---|
-|![Screenshot1](docs/screenshot3.png)|![Screenshot2](docs/screenshot4.png)
+![Screenshot1](docs/screenshot3.png)
 
 |screenshot 1|screenshot 2|
 |---|---|
@@ -22,8 +20,8 @@ Most switch nodes force you to choose a slot based on the same value you forward
 
 | Slot | Required | Purpose |
 | --- | --- | --- |
-| `source_a`, `source_b` | yes | Pass-through sources (any type) |
-| `source_c`, `source_d`, `source_e` | no | Additional pass-through sources |
+| `source_a` | yes | Pass-through source (any type) |
+| `source_b`, `source_c`, `source_d`, `source_e` | no | Additional pass-through sources |
 | `pass_if_a` … `pass_if_e` | no | Per-slot truthiness test (**not** a CONDITIONING input). If unconnected, the matching `source_X` is used as the condition |
 
 Toggles (required):
@@ -48,6 +46,65 @@ Toggles (required):
 ### Evaluation order
 
 Slots are tested in the order **A → B → C → D → E**. Slots whose `source_X` is not connected (C/D/E only) are skipped. The first slot whose condition evaluates truthy wins, and its `source_X` value is forwarded.
+
+## Simple Selector (Switch)
+
+- Category: `utils`
+- Display name: `Simple Selector (Switch)`
+- Class: `SimpleSelectorSwitch`
+
+A no-condition switch: instead of evaluating truthiness, you **explicitly pick which source to forward** from a dropdown. Each slot also carries a free-form label (a memo), and the chosen slot's label is re-emitted as a second output — handy for things like building a filename from the active choice.
+
+![Screenshot2](docs/screenshot4.png)
+
+### Inputs
+
+| Input | Required | Purpose |
+| --- | --- | --- |
+| `select` | yes | Dropdown `none / A / B / C / D / E` — which source to forward. `none` forwards nothing |
+| `label_a` … `label_e` | yes | Single-line per-slot memo (e.g. `SDXL base`). Not used for any flow decision; only the selected slot's label is re-emitted |
+| `block_on_none_selected` | yes | When `select` is `none`, emit an `ExecutionBlocker` (on **both** outputs) to skip downstream nodes instead of passing `None` |
+| `source_a` … `source_e` | no | Pass-through sources (any type). Wire only the slots you use |
+
+### Outputs
+
+| Output | Type | Meaning |
+| --- | --- | --- |
+| `output` | any | The `source_X` of the selected slot. `None` if `select` is `none` (or `ExecutionBlocker` if `block_on_none_selected` is ON), or if the selected slot's source is unconnected |
+| `label` | STRING | The selected slot's label. Empty when `select` is `none` |
+
+The selector is ComfyUI's stock dropdown — it gives "exactly one, or none" semantics natively with no extra UI. Selecting a slot whose `source_X` is unconnected returns `None` (it does **not** block); only `select = none` triggers the blocker.
+
+## Prompt Tabs
+
+- Category: `utils`
+- Display name: `Prompt Tabs`
+- Class: `PromptTabs`
+
+A notepad-style text node that keeps **any number of named prompt tabs** in a
+single box and outputs the text of the currently-active tab. Switch tabs to
+keep alternate prompts around without deleting them — handy when experimenting
+and you want to jump back to an earlier prompt.
+
+![Screenshot3](docs/screenshot5.png)
+
+| Action | How |
+| --- | --- |
+| Switch tab | Click the tab |
+| Add tab | Click `+` (tabs can grow without limit; they wrap onto multiple rows) |
+| Rename tab | Double-click the tab |
+| Delete tab | Click the `×` on the tab — asks for confirmation first (at least one tab always remains) |
+
+Outputs:
+
+| Output | Type | Meaning |
+| --- | --- | --- |
+| `text` | STRING | The content of the active tab |
+| `label` | STRING | The name of the active tab (`Tab 1`, `Tab 2`, or whatever you renamed it to) |
+
+This node ships a small JavaScript widget (in `web/`), so it needs a ComfyUI
+version that loads custom-node frontends. If the frontend fails to load it
+degrades to a plain multiline text box.
 
 ## Installation
 

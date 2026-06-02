@@ -36,10 +36,6 @@ class LenientSwitch:
                     any_type,
                     {"tooltip": "Pass-through source for slot A (any type)."},
                 ),
-                "source_b": (
-                    any_type,
-                    {"tooltip": "Pass-through source for slot B (any type)."},
-                ),
                 "treat_zero_as_false": ("BOOLEAN", {"default": True}),
                 "treat_empty_string_as_false": ("BOOLEAN", {"default": True}),
                 "evaluate_boolean": ("BOOLEAN", {"default": True}),
@@ -47,6 +43,10 @@ class LenientSwitch:
                 "block_on_all_false": ("BOOLEAN", {"default": False}),
             },
             "optional": {
+                "source_b": (
+                    any_type,
+                    {"tooltip": "Optional pass-through source for slot B (any type)."},
+                ),
                 "source_c": (
                     any_type,
                     {"tooltip": "Optional pass-through source for slot C (any type)."},
@@ -104,7 +104,6 @@ class LenientSwitch:
     def run(
         self,
         source_a,
-        source_b,
         treat_zero_as_false,
         treat_empty_string_as_false,
         evaluate_boolean,
@@ -114,7 +113,7 @@ class LenientSwitch:
     ):
         sources = {
             "a": source_a,
-            "b": source_b,
+            "b": kwargs.get("source_b", _NOT_PROVIDED),
             "c": kwargs.get("source_c", _NOT_PROVIDED),
             "d": kwargs.get("source_d", _NOT_PROVIDED),
             "e": kwargs.get("source_e", _NOT_PROVIDED),
