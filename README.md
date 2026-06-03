@@ -75,37 +75,6 @@ A no-condition switch: instead of evaluating truthiness, you **explicitly pick w
 
 The selector is ComfyUI's stock dropdown — it gives "exactly one, or none" semantics natively with no extra UI. Selecting a slot whose `source_X` is unconnected returns `None` (it does **not** block); only `select = none` triggers the blocker.
 
-## Prompt Tabs
-
-- Category: `utils`
-- Display name: `Prompt Tabs`
-- Class: `PromptTabs`
-
-A notepad-style text node that keeps **any number of named prompt tabs** in a
-single box and outputs the text of the currently-active tab. Switch tabs to
-keep alternate prompts around without deleting them — handy when experimenting
-and you want to jump back to an earlier prompt.
-
-![Screenshot3](docs/screenshot5.png)
-
-| Action | How |
-| --- | --- |
-| Switch tab | Click the tab |
-| Add tab | Click `+` (tabs can grow without limit; they wrap onto multiple rows) |
-| Rename tab | Double-click the tab |
-| Delete tab | Click the `×` on the tab — asks for confirmation first (at least one tab always remains) |
-
-Outputs:
-
-| Output | Type | Meaning |
-| --- | --- | --- |
-| `text` | STRING | The content of the active tab |
-| `label` | STRING | The name of the active tab (`Tab 1`, `Tab 2`, or whatever you renamed it to) |
-
-This node ships a small JavaScript widget (in `web/`), so it needs a ComfyUI
-version that loads custom-node frontends. If the frontend fails to load it
-degrades to a plain multiline text box.
-
 ## Installation
 
 Clone into your ComfyUI `custom_nodes` directory:
