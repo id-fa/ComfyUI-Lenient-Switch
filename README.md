@@ -12,7 +12,7 @@ Most switch nodes force you to choose a slot based on the same value you forward
 
 ## Node
 
-- Category: `utils`
+- Category: `Lenient Switch`
 - Display name: `Lenient Switch`
 - Class: `LenientSwitch`
 
@@ -49,7 +49,7 @@ Slots are tested in the order **A → B → C → D → E**. Slots whose `source
 
 ## Simple Selector (Switch)
 
-- Category: `utils`
+- Category: `Lenient Switch`
 - Display name: `Simple Selector (Switch)`
 - Class: `SimpleSelectorSwitch`
 

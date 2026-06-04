@@ -70,7 +70,7 @@ class LenientSwitch:
     RETURN_TYPES = (any_type, "BOOLEAN")
     RETURN_NAMES = ("output", "matched")
     FUNCTION = "run"
-    CATEGORY = "utils"
+    CATEGORY = "Lenient Switch"
 
     @staticmethod
     def _is_truthy(
@@ -205,7 +205,7 @@ class SimpleSelectorSwitch:
     RETURN_TYPES = (any_type, "STRING")
     RETURN_NAMES = ("output", "label")
     FUNCTION = "run"
-    CATEGORY = "utils"
+    CATEGORY = "Lenient Switch"
 
     def run(self, select, block_on_none_selected, **kwargs):
         if select == "none":
