@@ -81,7 +81,7 @@ Clone into your ComfyUI `custom_nodes` directory:
 
 ```bash
 cd ComfyUI/custom_nodes
-git clone https://github.com/id-fa/ComfyUI-Lenient-Switch
+git clone https://github.com/id-fa/ComfyUI-Lenient-Switch lenient-switch
 ```
 
 Restart ComfyUI. No additional dependencies required.
