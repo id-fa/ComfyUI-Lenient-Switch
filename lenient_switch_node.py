@@ -30,34 +30,61 @@ class LenientSwitch:
             "When connected, this value decides whether the matching source_X is "
             "forwarded; if unconnected, source_X is tested against itself."
         )
+        bypass_tooltip = (
+            "When ON, slots whose pass_if_X is connected AND falsy are skipped "
+            "WITHOUT evaluating their source_X, so that source's upstream chain "
+            "does not run (lazy evaluation). Slots whose pass_if_X is unconnected "
+            "are always evaluated (their winner can only be known at run time). "
+            "Note: nodes are not visually bypassed like rgthree; they simply do "
+            "not execute."
+        )
         return {
             "required": {
                 "source_a": (
                     any_type,
-                    {"tooltip": "Pass-through source for slot A (any type)."},
+                    {
+                        "tooltip": "Pass-through source for slot A (any type).",
+                        "lazy": True,
+                    },
                 ),
                 "treat_zero_as_false": ("BOOLEAN", {"default": True}),
                 "treat_empty_string_as_false": ("BOOLEAN", {"default": True}),
                 "evaluate_boolean": ("BOOLEAN", {"default": True}),
                 "treat_empty_list_as_false": ("BOOLEAN", {"default": True}),
                 "block_on_all_false": ("BOOLEAN", {"default": False}),
+                "bypass_unselected": (
+                    "BOOLEAN",
+                    {"default": False, "tooltip": bypass_tooltip},
+                ),
             },
             "optional": {
                 "source_b": (
                     any_type,
-                    {"tooltip": "Optional pass-through source for slot B (any type)."},
+                    {
+                        "tooltip": "Optional pass-through source for slot B (any type).",
+                        "lazy": True,
+                    },
                 ),
                 "source_c": (
                     any_type,
-                    {"tooltip": "Optional pass-through source for slot C (any type)."},
+                    {
+                        "tooltip": "Optional pass-through source for slot C (any type).",
+                        "lazy": True,
+                    },
                 ),
                 "source_d": (
                     any_type,
-                    {"tooltip": "Optional pass-through source for slot D (any type)."},
+                    {
+                        "tooltip": "Optional pass-through source for slot D (any type).",
+                        "lazy": True,
+                    },
                 ),
                 "source_e": (
                     any_type,
-                    {"tooltip": "Optional pass-through source for slot E (any type)."},
+                    {
+                        "tooltip": "Optional pass-through source for slot E (any type).",
+                        "lazy": True,
+                    },
                 ),
                 "pass_if_a": (any_type, {"tooltip": pass_if_tooltip}),
                 "pass_if_b": (any_type, {"tooltip": pass_if_tooltip}),
@@ -101,6 +128,40 @@ class LenientSwitch:
 
         return True
 
+    def check_lazy_status(
+        self,
+        treat_zero_as_false,
+        treat_empty_string_as_false,
+        evaluate_boolean,
+        treat_empty_list_as_false,
+        block_on_all_false,
+        bypass_unselected,
+        **kwargs,
+    ):
+        # All source_* are declared lazy. Returning a name asks ComfyUI to
+        # evaluate that source's upstream; never returning it leaves the upstream
+        # un-run (the "bypass" effect). Only connected sources appear in kwargs,
+        # so we never request an unconnected slot.
+        connected = [slot for slot in SLOTS if f"source_{slot}" in kwargs]
+        if not bypass_unselected:
+            return [f"source_{slot}" for slot in connected]
+
+        needed = []
+        for slot in connected:
+            pass_if = kwargs.get(f"pass_if_{slot}", _NOT_PROVIDED)
+            # Bypass only slots whose pass_if is connected AND falsy (guaranteed
+            # losers). An unconnected pass_if means the condition is the source
+            # itself, knowable only at run time, so that source must be evaluated.
+            if pass_if is _NOT_PROVIDED or self._is_truthy(
+                pass_if,
+                treat_zero_as_false,
+                treat_empty_string_as_false,
+                evaluate_boolean,
+                treat_empty_list_as_false,
+            ):
+                needed.append(f"source_{slot}")
+        return needed
+
     def run(
         self,
         source_a,
@@ -109,6 +170,7 @@ class LenientSwitch:
         evaluate_boolean,
         treat_empty_list_as_false,
         block_on_all_false,
+        bypass_unselected,
         **kwargs,
     ):
         sources = {
@@ -192,13 +254,40 @@ class SimpleSelectorSwitch:
                         ),
                     },
                 ),
+                "bypass_unselected": (
+                    "BOOLEAN",
+                    {
+                        "default": False,
+                        "tooltip": (
+                            "When ON, only the selected slot's source_X is evaluated; the "
+                            "upstream chains feeding the other (and, with 'none', all) "
+                            "sources do not run (lazy evaluation). Note: nodes are not "
+                            "visually bypassed like rgthree; they simply do not execute."
+                        ),
+                    },
+                ),
             },
             "optional": {
-                "source_a": (any_type, {"tooltip": "Source for slot A (any type)."}),
-                "source_b": (any_type, {"tooltip": "Source for slot B (any type)."}),
-                "source_c": (any_type, {"tooltip": "Source for slot C (any type)."}),
-                "source_d": (any_type, {"tooltip": "Source for slot D (any type)."}),
-                "source_e": (any_type, {"tooltip": "Source for slot E (any type)."}),
+                "source_a": (
+                    any_type,
+                    {"tooltip": "Source for slot A (any type).", "lazy": True},
+                ),
+                "source_b": (
+                    any_type,
+                    {"tooltip": "Source for slot B (any type).", "lazy": True},
+                ),
+                "source_c": (
+                    any_type,
+                    {"tooltip": "Source for slot C (any type).", "lazy": True},
+                ),
+                "source_d": (
+                    any_type,
+                    {"tooltip": "Source for slot D (any type).", "lazy": True},
+                ),
+                "source_e": (
+                    any_type,
+                    {"tooltip": "Source for slot E (any type).", "lazy": True},
+                ),
             },
         }
 
@@ -207,7 +296,21 @@ class SimpleSelectorSwitch:
     FUNCTION = "run"
     CATEGORY = "Lenient Switch"
 
-    def run(self, select, block_on_none_selected, **kwargs):
+    def check_lazy_status(
+        self, select, block_on_none_selected, bypass_unselected, **kwargs
+    ):
+        # source_* are lazy; only the names returned here get their upstream run.
+        # Only connected sources appear in kwargs, so unconnected slots are never
+        # requested.
+        connected = [slot for slot in SLOTS if f"source_{slot}" in kwargs]
+        if not bypass_unselected:
+            return [f"source_{slot}" for slot in connected]
+        if select == "none":
+            return []
+        slot = select.lower()
+        return [f"source_{slot}"] if slot in connected else []
+
+    def run(self, select, block_on_none_selected, bypass_unselected, **kwargs):
         if select == "none":
             if block_on_none_selected and ExecutionBlocker is not None:
                 blocker = ExecutionBlocker(None)

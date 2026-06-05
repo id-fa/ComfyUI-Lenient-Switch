@@ -33,8 +33,15 @@ Toggles (required):
 | `evaluate_boolean` | true | Booleans use their actual value. When OFF, booleans are always truthy |
 | `treat_empty_list_as_false` | true | Empty `list` / `tuple` is falsy |
 | `block_on_all_false` | false | When every slot is falsy, emit an `ExecutionBlocker` on the `output` socket to stop downstream execution |
+| `bypass_unselected` | false | Skip evaluating the `source_X` of slots that **can't** win, so their upstream chains don't run (see below) |
 
 `None` is always falsy. Values that don't match any falsy rule are truthy.
+
+#### `bypass_unselected` (lazy evaluation)
+
+When ON, a slot is skipped — its `source_X` upstream chain is **not executed** — only when its `pass_if_X` is **connected and falsy** (a guaranteed loser). This is ComfyUI-native lazy evaluation, not an rgthree-style mode change: the skipped nodes simply don't run; they are not visually greyed out.
+
+Slots whose `pass_if_X` is *unconnected* are always evaluated. Their condition is the source value itself, which can only be known by running the source, so they can't be skipped ahead of time. If you want a slot's upstream to be bypassable, wire its `pass_if_X`.
 
 ### Outputs
 
@@ -64,6 +71,7 @@ A no-condition switch: instead of evaluating truthiness, you **explicitly pick w
 | `select` | yes | Dropdown `none / A / B / C / D / E` — which source to forward. `none` forwards nothing |
 | `label_a` … `label_e` | yes | Single-line per-slot memo (e.g. `SDXL base`). Not used for any flow decision; only the selected slot's label is re-emitted |
 | `block_on_none_selected` | yes | When `select` is `none`, emit an `ExecutionBlocker` (on **both** outputs) to skip downstream nodes instead of passing `None` |
+| `bypass_unselected` | yes | When ON, only the selected slot's `source_X` is evaluated; the upstream chains feeding the other sources (or all of them, when `select` is `none`) don't run (lazy evaluation, not an rgthree-style mode change) |
 | `source_a` … `source_e` | no | Pass-through sources (any type). Wire only the slots you use |
 
 ### Outputs
