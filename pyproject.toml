@@ -1,6 +1,6 @@
 [project]
 name = "lenient-switch"
-version = "0.0.7"
+version = "0.0.8"
 description = "A switcher that allows specify conditions and inputs/outputs individually"
 readme = "README.md"
 license = {text = "MIT license"}
@@ -15,7 +15,8 @@ Repository = "https://github.com/id-fa/ComfyUI-Lenient-Switch"
 [tool.comfy]
 PublisherId = "id-fa"
 DisplayName = "Lenient Switch"
-Icon = ""
+Icon = "https://raw.githubusercontent.com/id-fa/ComfyUI-Lenient-Switch/refs/heads/main/docs/lenient_switch_icon.png"
+Banner = "https://raw.githubusercontent.com/id-fa/ComfyUI-Lenient-Switch/refs/heads/main/docs/lenient_switch_banner.png"
 Tags = []
 Repository = "https://github.com/id-fa/ComfyUI-Lenient-Switch"
 includes = []
