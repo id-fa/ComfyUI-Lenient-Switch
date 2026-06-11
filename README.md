@@ -91,6 +91,8 @@ The selector is ComfyUI's stock dropdown — it gives "exactly one, or none" sem
 
 Everything **Simple Selector (Switch)** does, but with a different frontend and an extra `bypass_unselected_groups` toggle that bypasses whole **canvas groups** in the rgthree [FastGroupsBypasser](https://github.com/rgthree/rgthree-comfy) style.
 
+![Screenshot3](docs/screenshot5.png)
+
 ### Exclusive checkbox selector
 
 Instead of the stock dropdown, this node shows an **exclusive checkbox list** (radio-style) — one row per slot plus a `none` row, exactly one ticked at a time:
