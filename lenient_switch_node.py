@@ -1,3 +1,5 @@
+import json
+
 try:
     from comfy_execution.graph import ExecutionBlocker
 except ImportError:
@@ -325,12 +327,179 @@ class SimpleSelectorSwitch:
         return (src, label)
 
 
+_SELECTOR_DEFAULT = json.dumps({"select": "none", "labels": ["", "", "", "", ""]})
+
+
+class SimpleSelectorSwitchAdvanced:
+    """SimpleSelectorSwitch reworked around a single custom selector widget.
+
+    The frontend (`web/simple_selector_group_bypass.js`) registers a custom
+    widget type **LENIENT_SELECTOR** via `getCustomWidgets` and renders the
+    `selector` input as an exclusive-checkbox radio list (slots A-E plus
+    `none`) with a per-slot editable label. The widget's value is a JSON string
+    `{"select": "a".."e"|"none", "labels": [..5 strings..]}`; `run` and
+    `check_lazy_status` parse it. This replaces the old per-slot `select` COMBO
+    + `label_a`-`label_e` STRING widgets with ONE first-class custom widget, so
+    the Vue (Nodes 2.0) renderer never disposes/rebuilds it away and there are no
+    hidden widgets to hide. `RETURN_TYPES`/`RETURN_NAMES`/`FUNCTION`/`CATEGORY`
+    are inherited from SimpleSelectorSwitch (same `(output, label)` outputs).
+
+    `bypass_unselected_groups` is a JS-only toggle (rgthree FastGroupsBypasser-
+    style group bypass keyed on the per-slot labels); Python ignores it. The
+    plain SimpleSelectorSwitch stays pure Python with no frontend. See CLAUDE.md.
+    """
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "selector": (
+                    "LENIENT_SELECTOR",
+                    {
+                        "default": _SELECTOR_DEFAULT,
+                        "tooltip": (
+                            "Exclusive-checkbox selector (slots A-E + none) with a "
+                            "per-slot editable label. Click a row to select; "
+                            "double-click a slot row to edit its label (the label "
+                            "also names the canvas group for bypass_unselected_groups). "
+                            'Value is JSON: {"select": ..., "labels": [..]}.'
+                        ),
+                    },
+                ),
+                "block_on_none_selected": (
+                    "BOOLEAN",
+                    {
+                        "default": False,
+                        "tooltip": (
+                            "When 'none' is selected, emit ExecutionBlocker so downstream "
+                            "nodes are skipped instead of receiving None."
+                        ),
+                    },
+                ),
+                "bypass_unselected": (
+                    "BOOLEAN",
+                    {
+                        "default": False,
+                        "tooltip": (
+                            "When ON, only the selected slot's source_X is evaluated; the "
+                            "upstream chains feeding the other (and, with 'none', all) "
+                            "sources do not run (lazy evaluation). Note: nodes are not "
+                            "visually bypassed like rgthree; they simply do not execute."
+                        ),
+                    },
+                ),
+                "bypass_unselected_groups": (
+                    "BOOLEAN",
+                    {
+                        "default": False,
+                        "tooltip": (
+                            "JS-only, rgthree FastGroupsBypasser-style group bypass. When "
+                            "ON, the canvas group whose name matches each slot's label is "
+                            "set to BYPASS (mode 4) for every UNSELECTED slot and to ALWAYS "
+                            "for the selected slot. Handled entirely by the frontend; the "
+                            "Python run/check_lazy_status ignore this toggle. Orthogonal to "
+                            "bypass_unselected (lazy eval). When OFF, referenced groups are "
+                            "restored to ALWAYS."
+                        ),
+                    },
+                ),
+            },
+            "optional": {
+                "source_a": (
+                    any_type,
+                    {"tooltip": "Source for slot A (any type).", "lazy": True},
+                ),
+                "source_b": (
+                    any_type,
+                    {"tooltip": "Source for slot B (any type).", "lazy": True},
+                ),
+                "source_c": (
+                    any_type,
+                    {"tooltip": "Source for slot C (any type).", "lazy": True},
+                ),
+                "source_d": (
+                    any_type,
+                    {"tooltip": "Source for slot D (any type).", "lazy": True},
+                ),
+                "source_e": (
+                    any_type,
+                    {"tooltip": "Source for slot E (any type).", "lazy": True},
+                ),
+            },
+        }
+
+    RETURN_TYPES = (any_type, "STRING")
+    RETURN_NAMES = ("output", "label")
+    FUNCTION = "run"
+    CATEGORY = "Lenient Switch"
+
+    @staticmethod
+    def _parse_selector(selector):
+        """Parse the LENIENT_SELECTOR JSON value into (select, labels).
+
+        `select` is lowercased to 'a'..'e'/'none'; `labels` is always a list of
+        exactly 5 strings. Tolerates malformed/empty input (falls back to none).
+        """
+        try:
+            data = json.loads(selector) if isinstance(selector, str) else selector
+        except (ValueError, TypeError):
+            data = None
+        if not isinstance(data, dict):
+            data = {}
+        select = str(data.get("select", "none")).lower()
+        labels = data.get("labels")
+        if not isinstance(labels, list):
+            labels = []
+        labels = [str(x) for x in labels[:5]]
+        labels += [""] * (5 - len(labels))
+        return select, labels
+
+    def check_lazy_status(
+        self,
+        selector,
+        block_on_none_selected,
+        bypass_unselected,
+        bypass_unselected_groups,
+        **kwargs,
+    ):
+        select, _ = self._parse_selector(selector)
+        connected = [slot for slot in SLOTS if f"source_{slot}" in kwargs]
+        if not bypass_unselected:
+            return [f"source_{slot}" for slot in connected]
+        if select == "none":
+            return []
+        return [f"source_{select}"] if select in connected else []
+
+    def run(
+        self,
+        selector,
+        block_on_none_selected,
+        bypass_unselected,
+        bypass_unselected_groups,
+        **kwargs,
+    ):
+        select, labels = self._parse_selector(selector)
+        if select == "none":
+            if block_on_none_selected and ExecutionBlocker is not None:
+                blocker = ExecutionBlocker(None)
+                return (blocker, blocker)
+            return (None, "")
+
+        src = kwargs.get(f"source_{select}", _NOT_PROVIDED)
+        label = labels[SLOTS.index(select)] if select in SLOTS else ""
+        if src is _NOT_PROVIDED:
+            return (None, label)
+        return (src, label)
+
+
 NODE_CLASS_MAPPINGS = {
     "LenientSwitch": LenientSwitch,
     "SimpleSelectorSwitch": SimpleSelectorSwitch,
+    "SimpleSelectorSwitchAdvanced": SimpleSelectorSwitchAdvanced,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "LenientSwitch": "Lenient Switch",
     "SimpleSelectorSwitch": "Simple Selector (Switch)",
+    "SimpleSelectorSwitchAdvanced": "Simple Selector (Switch) Advanced",
 }

@@ -83,6 +83,53 @@ A no-condition switch: instead of evaluating truthiness, you **explicitly pick w
 
 The selector is ComfyUI's stock dropdown — it gives "exactly one, or none" semantics natively with no extra UI. Selecting a slot whose `source_X` is unconnected returns `None` (it does **not** block); only `select = none` triggers the blocker.
 
+## Simple Selector (Switch) Advanced
+
+- Category: `Lenient Switch`
+- Display name: `Simple Selector (Switch) Advanced`
+- Class: `SimpleSelectorSwitchAdvanced`
+
+Everything **Simple Selector (Switch)** does, but with a different frontend and an extra `bypass_unselected_groups` toggle that bypasses whole **canvas groups** in the rgthree [FastGroupsBypasser](https://github.com/rgthree/rgthree-comfy) style.
+
+### Exclusive checkbox selector
+
+Instead of the stock dropdown, this node shows an **exclusive checkbox list** (radio-style) — one row per slot plus a `none` row, exactly one ticked at a time:
+
+```
+[ ] A  base prompt
+[■] B  detail prompt
+[ ] C  (unnamed — double-click)
+[ ] D  (unnamed — double-click)
+[ ] E  (unnamed — double-click)
+[ ] none
+```
+
+- **Click a row** to select that slot (or `none`). Flow behavior is identical to the plain node.
+- **Double-click a slot row** to edit that slot's label in an inline dialog. (`none` has no label.)
+
+The selector is a single custom widget: the choice and all five labels are stored together as the widget's value (a small JSON blob) and forwarded to the node — there is no separate dropdown or label fields. The selected slot's label is still re-emitted on the `label` output.
+
+### Group bypass
+
+When `bypass_unselected_groups` is ON, the canvas group **whose name matches each slot's label** is:
+
+- set to **ALWAYS** for the **selected** slot, and
+- set to **BYPASS** (mode 4 — the greyed-out rgthree look) for every **unselected** slot.
+
+With `none` selected, every referenced group is bypassed. When the toggle is OFF, the referenced groups are restored to ALWAYS.
+
+So each slot's label does double duty: it's the per-slot memo / re-emitted `label` output, **and** it names the group that slot turns on or off. Name your canvas groups to match the labels (e.g. a group titled `SDXL` for the slot whose label is `SDXL`).
+
+Notes:
+
+- This is a **pure frontend mode change** (it edits other nodes' `mode`, exactly like rgthree). The plain **Simple Selector (Switch)** node ships **no JS** and is unchanged — use it if you don't want any frontend behavior.
+- It is **orthogonal** to `bypass_unselected` (the lazy-eval toggle). You can run either, both, or neither: lazy-eval controls *which source this node evaluates*; group bypass controls *which canvas groups are mode-4 bypassed*.
+- Group membership is spatial (a node belongs to a group if it sits inside the group's box), so the toggle re-applies on selection / label changes and on workflow load. After restructuring groups, re-click a row to re-apply.
+
+### Known limitation: properties panel
+
+In **Nodes 2.0** (Vue rendering), selecting the node opens the right-hand properties panel, which draws the selector a **second time**. ComfyUI repaints only one of the two copies when you change the selection, so with the panel open the **node-body** checkboxes can momentarily show a stale choice until they next repaint (click, move, or reload). The selection itself is always correct — only the node-body redraw lags. Close the panel (deselect the node) for the normal, fully-synced view.
+
 ## Installation
 
 Clone into your ComfyUI `custom_nodes` directory:
