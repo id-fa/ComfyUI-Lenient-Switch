@@ -122,6 +122,8 @@ With `none` selected, every referenced group is bypassed. When the toggle is OFF
 
 So each slot's label does double duty: it's the per-slot memo / re-emitted `label` output, **and** it names the group that slot turns on or off. Name your canvas groups to match the labels (e.g. a group titled `SDXL` for the slot whose label is `SDXL`).
 
+Tip: in ComfyUI you can select a **single node** and press **Ctrl+G** to wrap it in its own group. Rename that group to match a slot label, and `bypass_unselected_groups` will toggle it along with everything else — giving even a lone node the clear, at-a-glance enabled/bypassed look.
+
 Notes:
 
 - This is a **pure frontend mode change** (it edits other nodes' `mode`, exactly like rgthree). The plain **Simple Selector (Switch)** node ships **no JS** and is unchanged — use it if you don't want any frontend behavior.

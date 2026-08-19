@@ -1,6 +1,6 @@
 [project]
 name = "lenient-switch"
-version = "0.0.10"
+version = "0.0.11"
 description = "A switcher that allows specify conditions and inputs/outputs individually"
 readme = "README.md"
 license = {text = "MIT license"}
