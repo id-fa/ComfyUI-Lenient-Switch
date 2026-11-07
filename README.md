@@ -134,6 +134,34 @@ Notes:
 
 In **Nodes 2.0** (Vue rendering), selecting the node opens the right-hand properties panel, which draws the selector a **second time**. ComfyUI repaints only one of the two copies when you change the selection, so with the panel open the **node-body** checkboxes can momentarily show a stale choice until they next repaint (click, move, or reload). The selection itself is always correct — only the node-body redraw lags. Close the panel (deselect the node) for the normal, fully-synced view.
 
+## Group Bypass Toggle
+
+- Category: `Lenient Switch`
+- Display name: `Group Bypass Toggle`
+- Type: `Group Bypass Toggle (Lenient Switch)` (frontend-only — no Python class)
+
+A tiny rgthree [FastGroupsBypasser](https://github.com/rgthree/rgthree-comfy)-style helper that bypasses / un-bypasses **one canvas group** with a single toggle. Unlike the Simple Selector nodes it forwards nothing and has no sockets: it only flips the `mode` of the nodes inside the chosen group.
+
+```
+group   [ my group        v ]
+bypass  [ ACTIVE | BYPASSED ]
+[      re-scan groups       ]
+```
+
+| Widget | Purpose |
+| --- | --- |
+| `group` | Dropdown of group names. **Exact match only** (no partial / prefix matching). If several groups share the chosen name, **all of them** are targeted. `(none)` does nothing |
+| `bypass` | `BYPASSED` sets every node inside the chosen group(s) to BYPASS (mode 4, the greyed-out rgthree look); `ACTIVE` sets them back to ALWAYS (mode 0) |
+| `re-scan groups` | Rescans the canvas and refills the `group` dropdown with every group name currently on the canvas (the list is also refreshed when the node is added and when a workflow loads). Scanning is on demand, not continuous |
+
+Behavior notes:
+
+- It is a **pure frontend node**: it never reaches the server and is skipped when the prompt is built, so it adds nothing to execution. Because of that it works without a server restart and shows a `frontend_only` source badge.
+- The toggle is applied when it is flipped, when a different group is picked (the current toggle state is applied to the new target; the previous group keeps whatever state it had) and on workflow load (the saved toggle state wins over the saved node modes).
+- Group membership is spatial (a node belongs to a group when its centre lies inside the group box), the same rule ComfyUI uses. After moving nodes or resizing groups, flip the toggle again to re-apply.
+- A group name that no longer exists stays selectable in the dropdown so a saved workflow never silently loses its target; it simply matches nothing until a group with that name exists again.
+- Works in both the classic canvas and **Nodes 2.0** (Vue) rendering — the three widgets are stock ComfyUI widget types.
+
 ## Installation
 
 Clone into your ComfyUI `custom_nodes` directory:

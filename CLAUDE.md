@@ -4,13 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this project is
 
-A small ComfyUI custom node package containing three switch nodes:
+A small ComfyUI custom node package containing three switch nodes plus one frontend-only helper node:
 
 - `LenientSwitch` — picks the first slot (A–E) whose **per-slot condition** is truthy. The condition input is decoupled from the pass-through source. See `README.md` for the user-facing spec.
 - `SimpleSelectorSwitch` — picks the source explicitly chosen via a `select` dropdown (`none / A / B / C / D / E`). Carries five single-line `label_a`–`label_e` fields as per-slot memos, and re-emits the chosen slot's label as a second `STRING` output.
-- `SimpleSelectorSwitchAdvanced` — subclass of `SimpleSelectorSwitch` with **identical server-side behavior** plus one extra `bypass_unselected_groups` toggle that is acted on **only by a frontend JS extension** (`web/simple_selector_group_bypass.js`), rgthree-FastGroupsBypasser-style. This is the **only** node in the package with any frontend.
+- `SimpleSelectorSwitchAdvanced` — subclass of `SimpleSelectorSwitch` with **identical server-side behavior** plus one extra `bypass_unselected_groups` toggle that is acted on **only by a frontend JS extension** (`web/simple_selector_group_bypass.js`), rgthree-FastGroupsBypasser-style. This is the only *Python* node in the package with any frontend.
+- `Group Bypass Toggle` — a **frontend-only virtual node** (`web/group_bypass_toggle.js`, no Python class, registered via `registerCustomNodes` like rgthree's Fast Groups Bypasser). One dropdown of canvas group names (filled by a `re-scan groups` button), one `bypass` toggle that sets every node inside the exactly-matching group(s) to BYPASS / ALWAYS. See the section below.
 
-The package is registered with ComfyUI via the standard `NODE_CLASS_MAPPINGS` / `NODE_DISPLAY_NAME_MAPPINGS` exports in `__init__.py`. It has **no Python dependencies** (`pyproject.toml` lists none beyond dev tooling). `LenientSwitch` and `SimpleSelectorSwitch` are pure Python with **no frontend JS** (`SimpleSelectorSwitch` uses ComfyUI's stock COMBO widget); only `SimpleSelectorSwitchAdvanced` ships JS, served via `WEB_DIRECTORY = "./web"` in `__init__.py`.
+The Python nodes are registered with ComfyUI via the standard `NODE_CLASS_MAPPINGS` / `NODE_DISPLAY_NAME_MAPPINGS` exports in `__init__.py`. It has **no Python dependencies** (`pyproject.toml` lists none beyond dev tooling). `LenientSwitch` and `SimpleSelectorSwitch` are pure Python with **no frontend JS** (`SimpleSelectorSwitch` uses ComfyUI's stock COMBO widget); `SimpleSelectorSwitchAdvanced` ships JS, and `Group Bypass Toggle` is JS only. Everything in `web/` is served via `WEB_DIRECTORY = "./web"` in `__init__.py` (ComfyUI loads every top-level `.js` in that directory).
 
 > **Note:** `PromptTabs` (a notepad-style multi-tab prompt node) used to live here in `prompt_tabs_node.py` + `web/prompt_tabs.js`. It was moved to **ComfyUI-PromptPalette-F** on 2026-06-03 and removed from this package.
 
@@ -72,6 +73,17 @@ The big idea: instead of a stock `select` COMBO + five `label_*` STRING widgets,
     - BYPASS is applied **before** ALWAYS so a node shared between the selected and an unselected group ends up enabled (selected wins).
     - The selector node itself is never bypassed (`if (n === node) continue`).
     - Triggers: `setSelection`/`editLabel`, the wrapped `bypass_unselected_groups` callback, and `afterConfigureGraph` (load). Group membership is **spatial** (`recomputeInsideNodes()`), so structural group edits only re-apply on the next selection/label change — documented in README, not a bug.
+
+### Group Bypass Toggle specifics (`web/group_bypass_toggle.js`)
+
+Frontend-only: there is **no Python class**, no entry in `NODE_CLASS_MAPPINGS`, and nothing to restart — a browser reload picks up changes. The node is registered in the extension's `registerCustomNodes` hook with `LiteGraph.registerNodeType("Group Bypass Toggle (Lenient Switch)", ...)`, sets `isVirtualNode = true` (so `graphToPrompt` skips it — it never reaches the server) and `serialize_widgets = true`. ComfyUI synthesizes a `frontend_only` node def for it (that is why it shows a `frontend_only` badge and why its library display name is the raw type string — pick the type string with the user-facing name in mind). The static `title` is `Group Bypass Toggle`, category `Lenient Switch`.
+
+Widgets are all **stock types created in the constructor**, in this order — `combo` (`group`), `toggle` (`bypass`, with `on: "BYPASSED"` / `off: "ACTIVE"` labels, honoured by both renderers), `button` (`re-scan groups`, `serialize = false`; last because it is rarely used — the user asked for that order). That is the whole reason it works unchanged in Nodes 2.0: Vue renders stock widgets with its own components and keeps constructor-created widgets across rebuilds. `widgets_values` is `[group, bypass]` (the button is not serialized). Things that are easy to break:
+
+- **Refresh the dropdown by mutating `widget.options.values` in place** (`splice`), never by assigning a new array. The Vue select keeps a shallow copy of the widget's options object and re-resolves `values` each time it opens; a new array would not be seen until the next full re-render. (Verified against frontend 1.58.5: `BaseWidget.options` is a Proxy over the same raw object the widget store holds, so in-place mutation is visible to every copy.) Do not use the deprecated `values: () => [...]` function form either — classic litegraph logs a deprecation warning for it.
+- `scanGroups` builds `[(none), ...sorted distinct non-empty titles]` and **keeps the current value in the list** even if its group is gone, so a loaded workflow never silently loses its target (and Vue does not flag the value as invalid). Scans run on `onAdded`, `onConfigure`, `afterConfigureGraph` and the button — not continuously (the user explicitly did not want constant scanning).
+- `applyBypass`: exact title match (`String(group.title).trim() === name`), **all** same-named groups, `group.recomputeInsideNodes()` first (membership is spatial), `n === node` skipped, BYPASS = 4 / ALWAYS = 0. Triggered by the toggle callback, the combo callback (re-targeting applies the current toggle to the new group; the old group is left as is), and `afterConfigureGraph` (saved toggle state is authoritative on load).
+- `LiteGraph` / `LGraphNode` are read from `globalThis` (ComfyUI exposes them for legacy extensions). If that ever disappears, import them from `../../scripts/app.js` exports instead.
 
 > **Server restart required after Python `INPUT_TYPES` changes** — a browser reload only reloads the JS; ComfyUI caches the node's input schema until the server restarts. Changing the `selector` input is also a **breaking change** for workflows saved with the old (select + label_a–e) Advanced node: their `widgets_values` won't line up, so re-set the selector after loading.
 
