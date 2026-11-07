@@ -144,14 +144,15 @@ A tiny rgthree [FastGroupsBypasser](https://github.com/rgthree/rgthree-comfy)-st
 
 ```
 group   [ my group        v ]
-bypass  [ ACTIVE | BYPASSED ]
+[   ACTIVE   |  BYPASSED    ]   <- large two-segment switch
+
 [      re-scan groups       ]
 ```
 
 | Widget | Purpose |
 | --- | --- |
 | `group` | Dropdown of group names. **Exact match only** (no partial / prefix matching). If several groups share the chosen name, **all of them** are targeted. `(none)` does nothing |
-| `bypass` | `BYPASSED` sets every node inside the chosen group(s) to BYPASS (mode 4, the greyed-out rgthree look); `ACTIVE` sets them back to ALWAYS (mode 0) |
+| `bypass` | A large two-segment switch. Click **BYPASSED** to set every node inside the chosen group(s) to BYPASS (mode 4, the greyed-out rgthree look); click **ACTIVE** to set them back to ALWAYS (mode 0). The empty strip under it is deliberate: it keeps the re-scan button out of the way of a hurried click |
 | `re-scan groups` | Rescans the canvas and refills the `group` dropdown with every group name currently on the canvas (the list is also refreshed when the node is added and when a workflow loads). Scanning is on demand, not continuous |
 
 Behavior notes:
@@ -160,7 +161,7 @@ Behavior notes:
 - The toggle is applied when it is flipped, when a different group is picked (the current toggle state is applied to the new target; the previous group keeps whatever state it had) and on workflow load (the saved toggle state wins over the saved node modes).
 - Group membership is spatial (a node belongs to a group when its centre lies inside the group box), the same rule ComfyUI uses. After moving nodes or resizing groups, flip the toggle again to re-apply.
 - A group name that no longer exists stays selectable in the dropdown so a saved workflow never silently loses its target; it simply matches nothing until a group with that name exists again.
-- Works in both the classic canvas and **Nodes 2.0** (Vue) rendering — the three widgets are stock ComfyUI widget types.
+- Works in both the classic canvas and **Nodes 2.0** (Vue) rendering. The dropdown and the button are stock ComfyUI widgets; the switch is a small canvas-drawn widget (so it can be bigger than the stock toggle in Nodes 2.0).
 
 ## Installation
 

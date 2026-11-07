@@ -2,7 +2,8 @@
 // FastGroupsBypasser style, that bypasses / un-bypasses ONE canvas group.
 //
 //   group   [ my group  v ]  <- dropdown of group names (exact match, no partial)
-//   bypass  [ ACTIVE | BYPASSED ]
+//   [  ACTIVE  |  BYPASSED  ] <- big two-segment switch (custom canvas widget)
+//                              (gap, so the button below is not hit by accident)
 //   [ re-scan groups ]       <- button: rescans the canvas groups into the dropdown
 //
 // There is no Python side at all: the node is registered via
@@ -12,9 +13,16 @@
 // several same-named groups flip together.
 //
 // Renderer notes (classic litegraph AND Vue / Nodes 2.0):
-//   * All three widgets are stock types (`button`, `combo`, `toggle`) created in
-//     the constructor, so Vue renders them with its own components and keeps
-//     them across rebuilds. No custom widget, no hidden widgets.
+//   * `group` (combo) and `re-scan groups` (button) are stock widget types, so
+//     Vue renders them with its own components. `bypass` is a custom
+//     canvas-drawn widget (the stock toggle has a fixed, small row height in
+//     Vue and cannot be enlarged): it draws a big ACTIVE | BYPASSED segment
+//     switch and reserves an empty gap under it. Vue renders custom widgets on
+//     a per-widget canvas (WidgetLegacy) honouring `computeSize` height and
+//     calling `draw`; clicks arrive via `mouse` on pointer UP, classic via
+//     `onPointerDown` — same dual path as simple_selector_group_bypass.js.
+//     All widgets are created in the constructor, so Vue keeps them across
+//     rebuilds. No hidden widgets.
 //   * The dropdown choices are refreshed by mutating `widget.options.values`
 //     IN PLACE (splice). The Vue select keeps a shallow copy of the options
 //     object and re-resolves `values` each time it opens, so replacing the
@@ -28,6 +36,10 @@ const NODE_TITLE = "Group Bypass Toggle";
 const NONE = "(none)";
 const MODE_ALWAYS = 0; // LiteGraph.ALWAYS
 const MODE_BYPASS = 4; // rgthree-style bypass
+const TOGGLE_KIND = "lenient_bypass_toggle"; // the custom widget's .type
+const TOGGLE_H = 36; // height of the drawn switch
+const TOGGLE_GAP = 16; // empty space under the switch (keeps the button away)
+const MARGIN = 15;
 
 function isToggleNode(node) {
   return node && node.type === NODE_TYPE;
@@ -112,6 +124,102 @@ function applyBypass(node) {
   }
 }
 
+// ----- the big bypass switch (custom widget) ----------------------------------
+
+function redraw(node, widget) {
+  // Vue: per-widget canvas repaints via triggerDraw(); classic: setDirtyCanvas.
+  widget?.triggerDraw?.();
+  node.setDirtyCanvas?.(true, true);
+  app.graph?.setDirtyCanvas?.(true, true);
+}
+
+function setBypass(node, widget, value) {
+  if (widget.value === value) return;
+  widget.value = value;
+  if (typeof widget.callback === "function") widget.callback(value);
+  applyBypass(node);
+  redraw(node, widget);
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x, y, w, h, r);
+  else ctx.rect(x, y, w, h);
+}
+
+// Segment under a node-relative x: false = left (ACTIVE), true = right (BYPASSED).
+function segmentAtX(widget, node, x) {
+  const width = widget._drawWidth || node.size[0];
+  return x >= width / 2;
+}
+
+function makeBypassWidget(node, name, defaultValue) {
+  const widget = {
+    name,
+    type: TOGGLE_KIND,
+    value: defaultValue, // boolean; serialized like the old stock toggle
+    computeSize() {
+      return [220, TOGGLE_H + TOGGLE_GAP];
+    },
+    draw(ctx, n, width, y) {
+      this._drawWidth = width;
+      const on = this.value === true;
+      const x0 = MARGIN;
+      const w = width - MARGIN * 2;
+      const h = TOGGLE_H - 4;
+      const top = y + 2;
+      const half = w / 2;
+      ctx.save();
+      // frame
+      ctx.fillStyle = "#1e1e1e";
+      ctx.strokeStyle = "#555";
+      ctx.lineWidth = 1;
+      roundRect(ctx, x0, top, w, h, 8);
+      ctx.fill();
+      ctx.stroke();
+      // selected segment
+      ctx.fillStyle = on ? "#8a3ab9" : "#3a7afe";
+      roundRect(ctx, on ? x0 + half + 2 : x0 + 2, top + 2, half - 4, h - 4, 6);
+      ctx.fill();
+      // labels
+      ctx.font = "bold 14px Arial";
+      ctx.textBaseline = "middle";
+      ctx.textAlign = "center";
+      ctx.fillStyle = on ? "#999" : "#fff";
+      ctx.fillText("ACTIVE", x0 + half / 2, top + h / 2);
+      ctx.fillStyle = on ? "#fff" : "#999";
+      ctx.fillText("BYPASSED", x0 + half + half / 2, top + h / 2);
+      ctx.restore();
+    },
+    // Classic litegraph: onPointerDown is checked first; wire the CanvasPointer.
+    onPointerDown(pointer, n, canvas) {
+      const gm = (canvas && canvas.graph_mouse) || app.canvas?.graph_mouse;
+      if (!gm) return false;
+      const top = typeof this.y === "number" ? this.y : this.last_y ?? 0;
+      const localY = gm[1] - n.pos[1] - top;
+      if (localY < 0 || localY >= TOGGLE_H) return false; // the gap is inert
+      const localX = gm[0] - n.pos[0];
+      pointer.onClick = () => setBypass(n, this, segmentAtX(this, n, localX));
+      return true;
+    },
+    // Vue/Nodes-2.0: the per-widget canvas forwards events to widget.mouse with
+    // a NODE-relative pos (canvasX/Y minus node.pos — see
+    // LGraphCanvas.processWidgetClick's pointer.finally); the reliable coords
+    // arrive on pointer UP. Subtract the widget's own top (`widget.y`).
+    mouse(event, pos, n) {
+      const t = event.type;
+      if (t !== "pointerup" && t !== "mouseup" && t !== "click") return false;
+      const top = typeof this.y === "number" ? this.y : this.last_y ?? 0;
+      const localY = pos[1] - top;
+      if (localY < 0 || localY >= TOGGLE_H) return false; // the gap is inert
+      setBypass(n, this, segmentAtX(this, n, pos[0]));
+      return true;
+    },
+  };
+  node.addCustomWidget(widget);
+  return widget;
+}
+
 // ----- the node ----------------------------------------------------------------
 
 app.registerExtension({
@@ -149,17 +257,10 @@ app.registerExtension({
           { values: [NONE] }
         );
 
-        this.addWidget(
-          "toggle",
-          "bypass",
-          false,
-          () => {
-            applyBypass(this);
-          },
-          { on: "BYPASSED", off: "ACTIVE" }
-        );
+        // Big ACTIVE | BYPASSED switch with an empty gap under it.
+        makeBypassWidget(this, "bypass", false);
 
-        // Rarely used, so it sits last.
+        // Rarely used, so it sits last (after the gap).
         const scanBtn = this.addWidget("button", "re-scan groups", null, () => {
           scanGroups(this);
         });
